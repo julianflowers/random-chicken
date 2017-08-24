@@ -1,0 +1,80 @@
+---
+title: "Recommended R packages"
+author: "Julian Flowers"
+date: "22/06/2017"
+output: 
+   html_document: 
+      toc: yes
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Essentials for data preparation and output (bold = must learn)
+
+All these packages are available from [CRAN](https://cran.r-project.org/)
+
+* `tidyverse` <http://tidyverse.org>  
+    + **`dplyr`**  
+    + **`ggplot2`**
+* `stringr`   <http://stringr.tidyverse.org>
+* **`rmarkdown`** 
+* **`readr`**
+* **`readxl`**
+* `data.table`
+* `janitor`
+
+## Time series
+
+* `forecast`
+* `seasonal`
+* `prophet`
+* `changepoint`
+
+
+## Mapping
+
+* `rgdal`
+* `rgeos`
+* `geojsonio`
+* `ggmap`
+* `tmap`
+* `leaflet`
+* `sp`
+
+## Interactive charts/ tables
+
+* `plotly`
+* `ggvis`
+* `highcharter`
+* `rbokeh`
+* `heatmaply`
+* `DT`
+* `rpivotTables`
+
+## Literature review and text analysis
+
+* `RISmed`
+* `tm`
+* `tidytext`
+* `text2vec`
+* `topicmodels`
+* `LDAvis`
+
+## Modelling
+
+* `broom`
+* `caret`
+* `glm`
+* `gam`
+* `glmnet`
+
+## Database connections
+
+* `odbc`
+* `DBI`
+
+
+
