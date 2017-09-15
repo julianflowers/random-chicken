@@ -1,0 +1,240 @@
+---
+title: "Beyond the profile: adventures in machine learning and automation"
+author: "Julian Flowers"
+date: "15/09/2017"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(fingertipsR)
+library(collapsibleTree)
+knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
+
+```
+
+## A bit about data science...
+
+>- include a couple of charts about data maturity cycle
+
+## Profiles
+
+>- include picture
+>- link to fingertips
+
+## Profiles
+
+* There are currently 71 profiles with 280 domains
+* That is ~ `r formatC(283 * 200, format = "d")` spine charts
+* (Not including the ~ `r formatC(8000 * 15, format = "d")` spine charts in practice profiles)
+
+## Profiles
+```{r fig.height=5.5}
+
+
+profiles <- profiles()
+
+profiles %>%
+  collapsibleTree(c("ProfileName", "DomainName"), tooltip = TRUE, width = 1000)
+
+
+```
+
+## What if I asked you...?
+
+>- Within in any one profile or domain
+    >- How similar are the spine charts?
+    >- Can we group local authorities on the basis of their profile?
+    >- What stories do the data tell?
+    
+>- Even the "skinniest" domain has at least 5 indicators - some have 50+
+>- This is complex multivariate data
+
+## Diabetes data
+```{r}
+## Get data
+
+p<- profiles %>%
+  filter(stringr::str_detect(ProfileName, "[Dd]iab"))
+a <- area_types()
+
+
+diabetes <- fingertips_data(DomainID = 1938133136, AreaTypeID = c(152, 153))
+
+diabetes1 <- diabetes %>%
+  filter(stringr::str_detect(AreaType, "CCG")) %>%
+  group_by(IndicatorName, Sex, Age) %>%
+  filter(TimeperiodSortable == max(TimeperiodSortable)) %>%
+  select(IndicatorName, AreaName, Value)
+
+dna <- diabetes1 %>%
+  summarise(meanNA = mean(is.na(Value))) %>% ## no missing data
+  knitr::kable()
+
+
+```
+
+```{r}
+library(ggjoy)
+library(govstyle)
+
+
+diabetes1 %>%
+  ggplot(aes(Value, IndicatorName)) +
+  geom_joy() +
+  theme_gov()
+```
+
+## Correlations
+
+```{r}
+## Wide
+
+diabetes1 %>%
+ ungroup() %>%
+  distinct() %>%
+  filter(!IndicatorName == "Level of participation in the National Diabetes Audit") %>%
+  spread(IndicatorName, Value) %>%
+  select(4:21) %>%
+  cor() %>%
+  corrplot::corrplot(tl.cex = .4, tl.col = "black", order ="hclust", addrect = 4)
+
+
+
+```
+
+## Clustering 
+
+```{r}
+library(factoextra)
+
+## Need to scale
+diabetesw <- diabetes1 %>%
+  ungroup() %>%
+  distinct() %>%
+    filter(!IndicatorName == "Level of participation in the National Diabetes Audit") %>%
+  spread(IndicatorName, Value) %>%
+  as.data.frame()
+ 
+rownames(diabetesw) <- diabetesw$AreaName
+
+diabetess <- diabetesw %>%
+  select(4:21) %>%
+  map_df(scale) %>%
+  as.data.frame()
+
+rownames(diabetess) <- diabetesw$AreaName
+
+
+
+seed <-1234
+# hierarchical
+d<- dist(diabetess)
+h <- hclust(d)
+
+diabetes_summaries <- diabetesw %>%
+  select(4:21) %>%
+  map_df(mean) %>%
+  t() %>%
+  as.data.frame()
+  
+```
+
+```{r fig.width=6}
+
+factoextra::fviz_dend(h, k=4, color_labels_by_k = 4 ,palette = viridis::magma(direction = 1, 4, begin = 0.2, end = 0.6), horiz = TRUE, type = "circular", cex = .4)
+
+
+```
+
+
+## What (if anything) is different about North Essex
+
+![](images/AreaProfilesTable.png)
+
+## Correlation network
+
+```{r}
+library(corrr)
+library(ggraph)
+library(igraph)
+
+cor <- diabetess %>%
+  correlate() %>%
+  stretch() %>%
+  filter(abs(r) > 0.7)
+
+graph_cor <- cor %>%
+  graph_from_data_frame(directed = FALSE)
+
+ggraph(graph_cor) +
+  geom_edge_link(aes(edge_alpha = abs(r), edge_width = abs(r), color = r)) +
+  guides(edge_alpha = "none", edge_width = "none") +
+  scale_edge_colour_gradientn(limits = c(-1, 1), colors = c("firebrick2", "dodgerblue2"))+
+  geom_node_point() +
+  geom_node_text(aes(label = name), size = rel(1.6), repel = TRUE) +
+  theme_graph()
+```
+
+
+
+
+## kmeans
+```{r} 
+  e <- eclust(diabetess, k = 4, FUNcluster = "kmeans", seed = seed , graph = TRUE)
+  
+factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 4)
+
+
+
+  
+```
+
+## What is this dimension business
+
+```{r}
+pca <- FactoMineR::PCA(diabetess, graph = FALSE)
+
+f1 <- factoextra::fviz_pca_contrib(pca,"var",  axes = 1) +
+  theme(axis.text.x = element_text(size = 4))
+
+f2 <- factoextra::fviz_pca_contrib(pca,"var",  axes = 2) +
+  theme(axis.text.x = element_text(size = 5))
+
+cowplot::plot_grid(f1,f2, ncol = 1)
+
+```
+
+
+```{r}
+
+e$cluster %>%
+  as.data.frame() %>% 
+  DT::datatable()
+
+```
+
+
+## Machine learning
+
+* 2 types
+    + Supervised
+    + Unsupervised
+* Train, test, validate    
+* 5 questions
+    + How much?
+    + Is it A or B (classification)
+    + Is it weird? (outliers and anomalies)
+    + Are there patterns in the data (clustering = unsupervised ML)
+    + So what - what next?
+* Hundreds of algorithms
+
+
+## Automation
+
+* Shiny document
+    + 
+* For loop
+* Parameterisation
+* R Markdown
