@@ -2,7 +2,9 @@
 title: "Beyond the profile: adventures in machine learning and automation"
 author: "Julian Flowers"
 date: "15/09/2017"
-output: slidy_presentation
+output: 
+    slidy_presentation:
+         fig.width: 6
 ---
 
 ```{r setup, include=FALSE}
@@ -30,13 +32,13 @@ knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 * (Not including the ~ `r formatC(8000 * 15, format = "d")` spine charts in practice profiles)
 
 ## Profiles
-```{r fig.height=5.8}
+```{r fig.height=6}
 
 
 profiles <- profiles()
 
 profiles %>%
-  collapsibleTree(c("ProfileName", "DomainName"), tooltip = TRUE, width = 1000)
+  collapsibleTree(c("ProfileName", "DomainName"), tooltip = TRUE, width = 900)
 
 
 ```
@@ -51,6 +53,17 @@ profiles %>%
 >- Even the "skinniest" domain has at least 5 indicators - some have 50+
 >- This is complex multivariate data
 
+## Fingertips API and `fingertipsR`
+
+* APIs = Application Programming Interface
+* Websites for computers
+* [Fingertips API](https://fingertips.phe.org.uk/api)
+![](images/api.png)
+
+
+
+
+
 ## Diabetes data
 ```{r}
 ## Get data
@@ -60,19 +73,31 @@ p<- profiles %>%
 a <- area_types()
 
 
-diabetes <- fingertips_data(DomainID = 1938133136, AreaTypeID = c(152, 153))
+diabetes <- fingertips_data(DomainID = 1938133136,   AreaTypeID = c(152, 153))
+
+
+prev_diabetes <- fingertips_data(IndicatorID  = 92952, AreaTypeID = c(152, 153)) %>% distinct()
+
+
 
 diabetes1 <- diabetes %>%
+  bind_rows(prev_diabetes) 
+  
+
+
+
+
+diabetes1 <- diabetes1 %>%
   filter(stringr::str_detect(AreaType, "CCG")) %>%
   group_by(IndicatorName, Sex, Age) %>%
   filter(TimeperiodSortable == max(TimeperiodSortable)) %>%
-  select(IndicatorName, AreaName, Value)
+  select(IndicatorName, AreaName, AreaCode, Value, Sex, TimeperiodSortable) %>%
+  distinct()
+  
+#diabetes1  %>%
+  #filter(stringr::str_detect(AreaName, "Brentw"))
 
-dna <- diabetes1 %>%
-  summarise(meanNA = mean(is.na(Value))) %>% ## no missing data
-  knitr::kable()
-
-
+#unique(diabetes1$AreaCode)
 ```
 
 ```{r}
@@ -91,14 +116,16 @@ diabetes1 %>%
 ```{r}
 ## Wide
 
+
+
 diabetes1 %>%
- ungroup() %>%
-  distinct() %>%
-  filter(!IndicatorName == "Level of participation in the National Diabetes Audit") %>%
+  ungroup() %>%
+  select(-Age) %>% 
   spread(IndicatorName, Value) %>%
-  select(4:21) %>%
+  select(-contains("partic")) %>%
+  select(5:23) %>%
   cor() %>%
-  corrplot::corrplot(tl.cex = .4, tl.col = "black", order ="hclust", addrect = 4)
+  corrplot::corrplot(tl.cex = .4, tl.col = "black", order ="hclust", addrect = 5)
 
 
 
@@ -114,15 +141,15 @@ library(igraph)
 ## Need to scale
 diabetesw <- diabetes1 %>%
   ungroup() %>%
-  distinct() %>%
-    filter(!IndicatorName == "Level of participation in the National Diabetes Audit") %>%
+  select(-Age) %>% 
   spread(IndicatorName, Value) %>%
+  select(-contains("partic")) %>%
+  select(c(1, 5:23)) %>%
   as.data.frame()
  
 rownames(diabetesw) <- diabetesw$AreaName
 
-diabetess <- diabetesw %>%
-  select(4:21) %>%
+diabetess <- diabetesw[, -1] %>%
   map_df(scale) %>%
   as.data.frame()
 
@@ -157,8 +184,7 @@ seed <-1234
 d<- dist(diabetess)
 h <- hclust(d)
 
-diabetes_summaries <- diabetesw %>%
-  select(4:21) %>%
+diabetes_summaries <- diabetesw[, -1] %>%
   map_df(mean) %>%
   t() %>%
   as.data.frame()
@@ -183,7 +209,6 @@ factoextra::fviz_dend(h, k=4, color_labels_by_k = 4 ,palette = viridis::magma(di
 
 ## kmeans
 ```{r} 
-
 e <- eclust(diabetess, k = 3, FUNcluster = "kmeans", seed = seed , graph = FALSE)
   
 factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 5)
