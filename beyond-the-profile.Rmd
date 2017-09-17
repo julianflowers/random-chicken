@@ -30,7 +30,7 @@ knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 * (Not including the ~ `r formatC(8000 * 15, format = "d")` spine charts in practice profiles)
 
 ## Profiles
-```{r fig.height=5.5}
+```{r fig.height=5.8}
 
 
 profiles <- profiles()
@@ -43,10 +43,10 @@ profiles %>%
 
 ## What if I asked you...?
 
->- Within in any one profile or domain
-    >- How similar are the spine charts?
-    >- Can we group local authorities on the basis of their profile?
-    >- What stories do the data tell?
+* Within in any one profile or domain
+    + How similar are the spine charts?
+    + Can we group local authorities on the basis of their profile?
+    + What stories do the data tell?
     
 >- Even the "skinniest" domain has at least 5 indicators - some have 50+
 >- This is complex multivariate data
@@ -104,10 +104,12 @@ diabetes1 %>%
 
 ```
 
-## Clustering 
+## Correlation network
 
 ```{r}
-library(factoextra)
+library(corrr)
+library(ggraph)
+library(igraph)
 
 ## Need to scale
 diabetesw <- diabetes1 %>%
@@ -126,6 +128,28 @@ diabetess <- diabetesw %>%
 
 rownames(diabetess) <- diabetesw$AreaName
 
+cor <- diabetess %>%
+  correlate() %>%
+  stretch() %>%
+  filter(abs(r) > 0.7)
+
+graph_cor <- cor %>%
+  graph_from_data_frame(directed = FALSE)
+
+ggraph(graph_cor) +
+  geom_edge_link(aes(edge_alpha = abs(r), edge_width = abs(r), color = r)) +
+  guides(edge_alpha = "none", edge_width = "none") +
+  scale_edge_colour_gradientn(limits = c(-1, 1), colors = c("firebrick2", "dodgerblue2"))+
+  geom_node_point() +
+  geom_node_text(aes(label = name), size = rel(1.6), repel = TRUE) +
+  theme_graph()
+```
+
+
+## Clustering 
+
+```{r}
+library(factoextra)
 
 
 seed <-1234
@@ -153,38 +177,16 @@ factoextra::fviz_dend(h, k=4, color_labels_by_k = 4 ,palette = viridis::magma(di
 
 ![](images/AreaProfilesTable.png)
 
-## Correlation network
-
-```{r}
-library(corrr)
-library(ggraph)
-library(igraph)
-
-cor <- diabetess %>%
-  correlate() %>%
-  stretch() %>%
-  filter(abs(r) > 0.7)
-
-graph_cor <- cor %>%
-  graph_from_data_frame(directed = FALSE)
-
-ggraph(graph_cor) +
-  geom_edge_link(aes(edge_alpha = abs(r), edge_width = abs(r), color = r)) +
-  guides(edge_alpha = "none", edge_width = "none") +
-  scale_edge_colour_gradientn(limits = c(-1, 1), colors = c("firebrick2", "dodgerblue2"))+
-  geom_node_point() +
-  geom_node_text(aes(label = name), size = rel(1.6), repel = TRUE) +
-  theme_graph()
-```
 
 
 
 
 ## kmeans
 ```{r} 
-  e <- eclust(diabetess, k = 4, FUNcluster = "kmeans", seed = seed , graph = TRUE)
+
+e <- eclust(diabetess, k = 3, FUNcluster = "kmeans", seed = seed , graph = FALSE)
   
-factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 4)
+factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 5)
 
 
 
@@ -234,7 +236,7 @@ e$cluster %>%
 ## Automation
 
 * Shiny document
-    + 
+    + https://jflowers.shinyapps.io/clusters_gp/ 
 * For loop
 * Parameterisation
 * R Markdown
