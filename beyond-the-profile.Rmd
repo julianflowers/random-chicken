@@ -20,10 +20,6 @@ knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 
 >- include a couple of charts about data maturity cycle
 
-## Profiles
-
->- include picture
->- link to fingertips
 
 ## Profiles
 
@@ -60,7 +56,9 @@ profiles %>%
 * [Fingertips API](https://fingertips.phe.org.uk/api)
 ![](images/api.png)
 
+## Fingertips metadata
 
+* http://rpubs.com/jflowers/304699
 
 
 
