@@ -14,6 +14,20 @@ library(fingertipsR)
 library(collapsibleTree)
 knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 
+inds <- indicators()
+
+n_indicators <- length(unique(inds$IndicatorID))
+
+
+n_profiles <- length(unique(inds$ProfileID))
+n_domains <- length(unique(inds$DomainID))
+
+most_freq_ind <- inds %>%
+  group_by(IndicatorID, IndicatorName) %>%
+  count(sort = TRUE) %>%
+  ungroup() %>%
+  top_n(10) %>%
+  select(IndicatorName)
 ```
 
 ## A bit about data science...
@@ -23,7 +37,9 @@ knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 
 ## Profiles
 
-* There are currently 71 profiles with 280 domains
+* There are currently `r n_profiles` profiles with `r n_domains` domains
+* `r n_indicators` unique indicators
+* The most frequently used indicators are *`r most_freq_ind$IndicatorName`*
 * That is ~ `r formatC(283 * 200, format = "d")` spine charts
 * (Not including the ~ `r formatC(8000 * 15, format = "d")` spine charts in practice profiles)
 
@@ -31,10 +47,10 @@ knitr::opts_knit$set(root.dir = "~/Documents/R_projects/random-chicken")
 ```{r fig.height=6}
 
 
-profiles <- profiles()
 
-profiles %>%
-  collapsibleTree(c("ProfileName", "DomainName"), tooltip = TRUE, width = 900)
+
+inds %>%
+  collapsibleTree(c("ProfileName", "DomainName", "IndicatorName"), tooltip = TRUE, width = 1200, linkLength = 200, height = 600)
 
 
 ```
@@ -49,6 +65,14 @@ profiles %>%
 >- Even the "skinniest" domain has at least 5 indicators - some have 50+
 >- This is complex multivariate data
 
+## Automation
+
+* Shiny document
+    + https://jflowers.shinyapps.io/clusters_gp/ 
+* *For* loop
+* Parameterisation
+* R Markdown
+
 ## Fingertips API and `fingertipsR`
 
 * APIs = Application Programming Interface
@@ -60,21 +84,73 @@ profiles %>%
 
 * http://rpubs.com/jflowers/304699
 
+## `fingertipsR`
 
+```{r, cache=TRUE}
+
+library(fingertipsR)
+
+
+
+a <- area_types()
+
+
+
+r <- fingertips_redred(ProfileID = 19)
+
+r %>%
+  mutate_if(is.factor, as.character) %>%
+  ggplot(aes(AreaName, IndicatorName)) +
+  geom_tile(fill = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4), 
+        axis.text.y = element_text(size = 4)) +
+  labs(x = "", 
+       y = "")
+
+
+
+
+```
+
+
+## Machine learning
+
+* 2 types
+    + Supervised
+    + Unsupervised
+* Train, test, validate    
+* 5 questions
+    + How much?
+    + Is it A or B (classification)
+    + Is it weird? (outliers and anomalies)
+    + Are there patterns in the data (clustering = unsupervised ML)
+    + So what - what next?
+* Hundreds of algorithms
 
 ## Diabetes data
 ```{r}
 ## Get data
 
-p<- profiles %>%
+p <- inds %>%
   filter(stringr::str_detect(ProfileName, "[Dd]iab"))
 a <- area_types()
+```
 
+
+```{r}
 
 diabetes <- fingertips_data(DomainID = 1938133136,   AreaTypeID = c(152, 153))
 
+diabetes <- diabetes %>%
+  mutate_if(is.factor, as.character)
 
-prev_diabetes <- fingertips_data(IndicatorID  = 92952, AreaTypeID = c(152, 153)) %>% distinct()
+
+prev_diabetes <- fingertips_data(IndicatorID  = 92952, AreaTypeID = c(152, 153)) %>% distinct() %>%
+    mutate_if(is.factor, as.character)
+```
+
+
+```{r}
 
 
 
@@ -82,10 +158,12 @@ diabetes1 <- diabetes %>%
   bind_rows(prev_diabetes) 
   
 
+```
+
+```{r}
 
 
-
-diabetes1 <- diabetes1 %>%
+diabetes2 <- diabetes1 %>%
   filter(stringr::str_detect(AreaType, "CCG")) %>%
   group_by(IndicatorName, Sex, Age) %>%
   filter(TimeperiodSortable == max(TimeperiodSortable)) %>%
@@ -116,7 +194,7 @@ diabetes1 %>%
 
 
 
-diabetes1 %>%
+diabetes2 %>%
   ungroup() %>%
   select(-Age) %>% 
   spread(IndicatorName, Value) %>%
@@ -137,7 +215,7 @@ library(ggraph)
 library(igraph)
 
 ## Need to scale
-diabetesw <- diabetes1 %>%
+diabetesw <- diabetes2 %>%
   ungroup() %>%
   select(-Age) %>% 
   spread(IndicatorName, Value) %>%
@@ -171,6 +249,7 @@ ggraph(graph_cor) +
 ```
 
 
+
 ## Clustering 
 
 ```{r}
@@ -191,7 +270,7 @@ diabetes_summaries <- diabetesw[, -1] %>%
 
 ```{r fig.width=6}
 
-factoextra::fviz_dend(h, k=4, color_labels_by_k = 4 ,palette = viridis::magma(direction = 1, 4, begin = 0.2, end = 0.6), horiz = TRUE, type = "circular", cex = .4)
+factoextra::fviz_dend(h, k=5, color_labels_by_k = 5 ,palette = viridis::magma(direction = 1, 5, begin = 0.1, end = 0.9), horiz = TRUE, type = "circular", cex = .4)
 
 
 ```
@@ -209,14 +288,15 @@ factoextra::fviz_dend(h, k=4, color_labels_by_k = 4 ,palette = viridis::magma(di
 ```{r} 
 e <- eclust(diabetess, k = 3, FUNcluster = "kmeans", seed = seed , graph = FALSE)
   
-factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 5)
+factoextra::fviz_cluster(e, repel = TRUE, ellipse.type = "convex", ellipse = TRUE, ellipse.level = .99, labelsize = 5) +
+  theme_minimal()
 
 
 
   
 ```
 
-## What is this dimension business
+## Data dimensions - dimensionality reduction
 
 ```{r}
 pca <- FactoMineR::PCA(diabetess, graph = FALSE)
@@ -225,7 +305,7 @@ f1 <- factoextra::fviz_pca_contrib(pca,"var",  axes = 1) +
   theme(axis.text.x = element_text(size = 4))
 
 f2 <- factoextra::fviz_pca_contrib(pca,"var",  axes = 2) +
-  theme(axis.text.x = element_text(size = 5))
+  theme(axis.text.x = element_text(size = 6))
 
 cowplot::plot_grid(f1,f2, ncol = 1)
 
@@ -241,25 +321,6 @@ e$cluster %>%
 ```
 
 
-## Machine learning
-
-* 2 types
-    + Supervised
-    + Unsupervised
-* Train, test, validate    
-* 5 questions
-    + How much?
-    + Is it A or B (classification)
-    + Is it weird? (outliers and anomalies)
-    + Are there patterns in the data (clustering = unsupervised ML)
-    + So what - what next?
-* Hundreds of algorithms
 
 
-## Automation
 
-* Shiny document
-    + https://jflowers.shinyapps.io/clusters_gp/ 
-* For loop
-* Parameterisation
-* R Markdown
