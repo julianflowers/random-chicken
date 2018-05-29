@@ -198,7 +198,7 @@ t
 
 And finally, we could repeat this for the other geographies and combine them all into a single dataset.
 
-The markdown file for this note is available at. Please feel free to suggest improvements.
+The markdown file for this note is available [here](https://github.com/julianflowers/random-chicken/edit/master/tidy_data_plea1.Rmd). Please feel free to suggest improvements.
 
 
 # A plea to data publishers
