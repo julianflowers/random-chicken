@@ -1,0 +1,227 @@
+---
+title: "Keep data tidy"
+author: "Julian Flowers, Seb Fox, James Perry"
+date: "26/04/2018"
+output:
+  html_document: default
+  word_document: default
+subtitle: A plea to data publishers and developers
+bibliography: tidy_data.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, cache = TRUE, warning  = FALSE)
+
+library(pacman)
+p_load(readxl, tidyverse, corrplot, tmap, geojsonio)
+
+```
+
+My colleague recently blogged about a ["wrangle free world"](https://nhsrcommunity.com/blog/aiming-for-a-wrangle-free-or-reduced-world/). This is the notion that a significant proportion of analytical time is devoted to cleaning, reshaping and reorganising data so it is ready for analysis, rather than analysing it, and that this effort would be significantly reduced if data were made available in easier to use formats.
+
+One approach to this which has gained considerable attention recently is the *tidy data* framework. [@Wickham2014a]. This borrows heavily from database concepts like [Codd's rules of normalisation](https://en.wikipedia.org/wiki/Codd%27s_12_rules) and introduces the idea of tidy datasets. 
+
+Data is tidy if:
+
+* there is one observation per row
+* there is one variable per column
+* there is on observational unit per table.
+
+As Wickham says:
+
+>A huge amount of effort is spent cleaning data to get it ready for analysis, but there has been little research on how to make data cleaning as easy and effective as possible. This paper tackles a small, but important, component of data cleaning: data tidying. Tidy datasets are easy to manipulate, model and visualize, and have a specific structure: each variable is a column, each observation is a row, and each type of observational unit is a table. This framework makes it easy to tidy messy datasets because only a small set of tools are needed to deal with a wide range of un-tidy datasets. This structure also makes it easier to develop tidy tools for data analysis, tools that both input and output tidy datasets. The advantages of a consistent data structure and matching tools are demonstrated with a case study free from mundane data manipulation chores.
+
+Following this a slew of *R* packages has emerged which use this framework and the "go to" data tidying package from Wickham himself is called the `tidyverse`. This contains the functions of the workhouse data wrangling packages `dplyr` and `tidyr`.
+
+Formatted spreadsheets with multiple headers and multiple sheets may have some benefits for tabular data presentation, but they can be unhelpful from an analytical point of view. They can make it  difficult to conduct secondary analysis and may waste time and effort in reformatting and reshaping data, and may introduce risk and error from cutting and pasting. They are *untidy*, and if data publishers must continue to put out formatted excel files, we contend they should publish a tidy text or csv formatted file alongside.
+
+Why bother? Let's look at an example. PHE have just published small area data on childhood obesity on [.GOV.UK](https://www.gov.uk/government/statistics/child-obesity-and-excess-weight-small-area-level-data). This consists of 4 (large) workbooks containing data for MSOAs, electoral wards, CCGs and local authorities. Each workbook has an introductory sheet, and 4 sheets containing data. An example is shown below.
+
+![](sheet.png)
+
+It looks nicely laid out - there are 4 sheets, one for each of obesity and excess weight in reception year and year 6 - but what if we want to look at the relationships between obesity in reception year and year 6 over time? 
+
+We would have to cut and paste several sets of data from 2 of the sheets into a new workbook or sheet. We would have to repeat this if we also wanted to look at the same relationship for excess weight. 
+
+It is difficult to do this analysis in Excel and to conduct this analysis in R is made unnecessarily difficult by the fact that sheets have multiple headers. Any analysis of these data would be greatly assisted by publishing a tidy version of the data. This means having a single row for each observation and a single column for each variable.
+
+These data can be imported into R and reshaped using `readxl` and tools from the `tidyverse` package.
+
+```{r}
+
+library(downloader)
+
+## Download data
+obesity <- download("https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/701873/NCMP_data_MSOA_update_2018.xlsx", "ncmp_msoa.xlsx", mode = "wb")
+
+## Identify sheets
+
+obesity_sheets <- excel_sheets("ncmp_msoa.xlsx")
+
+obesity_sheets <- obesity_sheets[2:5]
+
+## Import sheets
+## try one sheet
+
+obesity_data <- read_excel("ncmp_msoa.xlsx", sheet = obesity_sheets[2], skip = 2, na = "s")
+glimpse(obesity_data)
+
+```
+
+Note that the sheets use an "s" to denote suppressed data due to small numbers. These data are missing from dataset so I have replaced them with NA on import. 
+
+The next steps are:
+
+1. Import all sheets and turn into a single data frame
+2. Add metadata
+3. Convert to tidy data format
+
+We can achieve the import and metadata steps with a *for* loop.
+
+```{r for-loop}
+
+df <- data.frame()
+
+for (sheet in obesity_sheets){
+  
+  obesity_data <- read_excel("ncmp_msoa.xlsx", sheet = sheet, skip = 2, na = "s") %>% mutate(ind = sheet)
+  
+  df <- bind_rows(df, obesity_data) %>%
+    select(`MSOA code`:ind)
+}
+
+head(df)
+
+
+```
+
+We can use `tidyr` functions to create a long format data set...
+
+```{r reshape}
+
+df <- df %>%
+  gather(metric, value, Numerator:UCI__4)
+
+glimpse(df)
+
+```
+
+Now we have a dataset of 679100 rows and 7 columns. Just 2 more steps:
+
+1. Add time periods
+2. Tidy variable labels for the metric field and round data
+
+```{r add time periods and create dataset}
+
+
+df <- df %>%
+  mutate(value = round(value, 2), 
+         period = rep(c("2010/11-2012/13", "2011/12-2013/14", "2012/13-2014/15", "2013/14-2015/16","2014/15-2016/17" ), 6791, each = 20), 
+         metric = case_when(str_detect(metric, "^Numerator") ~ "Numerator", 
+                            str_detect(metric, "^Denominator") ~ "Denominator",
+                            str_detect(metric, "^UCI") ~ "UCI",
+                            str_detect(metric, "^LCI") ~ "LCI", 
+                            TRUE ~ "%")) %>%
+  select(`MSOA code`:metric, period, value) %>%
+  distinct() 
+  
+
+df_wide <- df %>%
+  spread(metric, value) %>%
+  select(c(`MSOA code`:period, Numerator, Denominator, `%`, LCI, UCI ))
+
+## write_csv(df_wide, "tidy_ncmp.csv") export tidied table.
+
+```
+
+Now we have a tidy data frame where each row is a single observation. It looks like this.
+
+![](tidy2.png)
+
+We can now look at the trend in the association of  overweight and obesity between reception year and year 6 for example.
+
+```{r fig.cap= "Obesity correlations", fig.height=6, fig.width=8}
+
+df %>%
+  filter(metric == "%") %>%
+  mutate(index = paste(ind, period)) %>%
+  select(-c(period, ind)) %>%
+  #slice(c(1, 27165, 53791, 80698))
+  spread(index, value) %>%
+  mutate_if(is.numeric, function(x) ifelse(is.na(x), median(x, na.rm = TRUE), x)) %>%
+  select(`Reception_ExcessWeight 2010/11-2012/13`:`Year6_Obese 2014/15-2016/17`) %>% 
+  select(contains("Obese")) %>%
+  #pairs(panel = panel.smooth)
+  cor(.) %>%
+  corrplot(tl.cex = .8, tl.col = "black", method = "square", order = "hclust", number.cex = .5, type = "lower")
+
+  
+```
+
+This shows that correlations for obesity are stronger in year 6 than in reception year and persist over time.
+
+We can now also map the data easily.
+
+```{r fig.cap="Map of MSOA obesity rates in year 6"}
+
+palette <- RColorBrewer::brewer.pal(10, "Spectral")
+credits <- "Contains ordnance survey data© \nCrown copyright and database right 2016"
+
+## get boundary file for MSOAs from http://geoportal.statistics.gov.uk/datasets?q=MSOA_Boundaries_2011&sort=name
+
+shape <- "https://opendata.arcgis.com/datasets/826dc85fb600440889480f4d9dbb1a24_2.geojson"
+
+shape <- geojson_read(shape, what = "sp")
+
+shape <- subset(shape, substr(msoa11cd, 1, 1) == "E") ## just English MSOAs
+
+map_data <- df %>%
+  filter(metric == "%", ind == "Year6_Obese", period == "2014/15-2016/17")
+
+shape@data <- shape@data %>%
+  left_join(map_data, by = c("msoa11cd" = "MSOA code"))
+
+t <- tm_shape(shape) +
+  tm_fill("value", style = "kmeans" , n = 10,
+          palette = palette, title = "Year 6 obesity rate\n 2014/15-2016/17") +
+  tm_credits( credits, size = 0.5, align = "right") +
+  tm_layout(legend.outside = TRUE, 
+            frame = FALSE) +
+  tm_compass(position = c("left", "center")) + 
+  tm_scale_bar(position = c("left", "center"))
+
+t
+
+
+```
+
+
+And finally, we could repeat this for the other geographies and combine them all into a single dataset.
+
+The markdown file for this note is available at. Please feel free to suggest improvements.
+
+
+# A plea to data publishers
+
+Hopefully this vignette shows that although it is possible to reshape spreadsheets with multiple sheets and untidy data into a tidy format for analysis in R, it is a lot of effort. This could be ameliorated by data publishers in 3 simple steps.
+
+1. Creating a tidy dataset in the first place and publish this as a .txt or .csv file alongside the spreadsheets
+2. For missing data use NA or a numeric code (NOT 0) - or at least agreeing some common practice.
+3. Publishing a code book.
+
+This would make data more open, easier to reuse, and encourage reproducibility.
+
+## Addendum
+
+I have subsequently become aware of a new package `tidyxl` which may make this job easier. Also the author of the package has written a book about tidy data and wrangling spreadsheets (https://nacnudus.github.io/spreadsheet-munging-strategies/tidy-clean.html). And finally, the GSS and ONS are thinking along the same lines and are developing a set of Python tools. This is called Data Baker - https://scraperwiki.com/2015/03/databaker-making-spreadsheets-usable/.
+
+## References
+
+
+
+
+
+
+
+
+
