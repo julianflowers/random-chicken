@@ -12,7 +12,7 @@ bibliography: tidy_data.bib
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, cache = TRUE, warning  = FALSE)
 
-if(!require("pacman") install.pacakges("pacman")
+if(!require("pacman")) install.packages("pacman")
 library(pacman)
 p_load(readxl, tidyverse, corrplot, tmap, geojsonio, downloader)
 
