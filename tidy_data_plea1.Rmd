@@ -1,10 +1,10 @@
 ---
 title: "Keep data tidy"
 author: "Julian Flowers, Seb Fox, James Perry"
-date: "26/04/2018"
+date: "r Sys.Date()"
 output:
-  html_document: default
   word_document: default
+  html_document: default
 subtitle: A plea to data publishers and developers
 bibliography: tidy_data.bib
 ---
@@ -13,7 +13,7 @@ bibliography: tidy_data.bib
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, cache = TRUE, warning  = FALSE)
 
 library(pacman)
-p_load(readxl, tidyverse, corrplot, tmap, geojsonio)
+p_load(readxl, tidyverse, corrplot, tmap, geojsonio, downloader)
 
 ```
 
@@ -47,9 +47,7 @@ It is difficult to do this analysis in Excel and to conduct this analysis in R i
 
 These data can be imported into R and reshaped using `readxl` and tools from the `tidyverse` package.
 
-```{r}
-
-library(downloader)
+```{r download and process sheets}
 
 ## Download data
 obesity <- download("https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/701873/NCMP_data_MSOA_update_2018.xlsx", "ncmp_msoa.xlsx", mode = "wb")
