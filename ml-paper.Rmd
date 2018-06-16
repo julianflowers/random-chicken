@@ -1,0 +1,202 @@
+---
+title: "Paper on ml and ph"
+author: "Julian Flowers"
+date: "14/06/2018"
+output: 
+    html_document:
+      toc: yes
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+
+## What is machine learning/ AI
+
+## Precision medicine or precision public health
+
+https://www.frontiersin.org/research-topics/4526/precision-public-health
+
+```{r read-in-articles}
+
+
+
+
+
+
+
+```
+
+
+> Precision public health. https://www.gatesfoundation.org/Who-We-Are/General-Information/Leadership/Executive-Leadership-Team/Sue-Desmond-Hellmann. https://www.aspeninstitute.org/videos/public-health-grand-rounds-sue-desmond-hellmann/. In closing, a simple shift from “personalized medicine” to “precision medicine” allows us to imagine a future practice of medicine and public health in which large-scale biologic, personal, environmental and social information can be analyzed with new computational tools to identify determinants of health and disease, and to develop both individualized and population-level interventions to treat and prevent human disease and improve health equity. https://blogs.cdc.gov/genomics/2015/03/02/precision-public/. Three areas: 1) use of genomics in control of communicable disease; 2) use of information technology and data science for ph surveillance and tracking; 3) targeted prevention; 
+
+NEJM articlce - precision medicine misses the point...
+
+https://www.nejm.org/doi/pdf/10.1056/NEJMp1506241
+
+  
+https://blogs.cdc.gov/genomics/2016/06/15/precision-reconciling/
+> Data: As the data deluge continues, we have a unique opportunity to use information from multiple levels both “below the skin” (genomics, omics, molecules) and “above the skin” (behavior, environment, place, policies) to have a more coherent picture of determinants of health and disease in each population. As discussed at the meeting, there are ongoing studies (e.g. asthma) and near term opportunities for linking existing data and applying new tools of measurement to get a more complete picture of health and disease in relation to time, place and persons. Better and more precise measurements of environmental and social determinants of health and their interactions with our biology could lead to more focused interventions that are not “just drugs, genes and diseases.”
+
+> Action: One important take home message is that data are not enough! New and more precise population health data should be used to develop and implement actions that can improve health and prevent disease. Actions can include treatments, prevention strategies, policies, and programs. The “precision” in action will be based on evidence that ties population data to measurable outcomes in subpopulations stratified by persons, place, and time. Action is also multilevel (e.g., individual, family, community, societal) and multisectorial (healthcare, education, housing, etc.) Solving health problems of children (and adults) will involve both the private and public sector using decision support tools and community data to impact health and policy and program decisions.
+
+> A focus on equity: A fundamental concern for public health is promoting health equity by reducing health disparities among groups of people. Throughout the summit, there was a focus on addressing health equities in populations both in the US and globally. If precision medicine is to succeed as a movement, its’ benefits need to reach all segments of society. Starting with equity in mind, population data collected should not only document that inequities exist, but influence actions and solutions to address them. Dr. Sue Desmond-Hellman articulated this emphasis on equity, in her recent TED talk and reiterated again at the summit. For example, on the topic of precision surveillance she said:
+
+
+2016: The Year of Precision Public Health!
+https://blogs.cdc.gov/genomics/2016/12/14/2016/
+
+To achieve more precision in global public health interventions, Dowell et al outline four concrete steps including:
+
+1- Registering births and deaths, as basic demographic data are necessary for rational public-health decisions.
+
+2- Enhancing surveillance systems to track disease, requiring infrastructure and systems to collect and analyze data.
+
+3- Incorporating laboratory analyses to understand causes of death and disease.
+
+4- Training more public-health personnel to use local information for setting strategies and  translating decisions into action.
+
+Precision medicine might not improve population health because of the complexity of disease pathogenesis, especially for common chronic diseases. As a result, the promise of precision medicine to identify predictors of disease that can help guide personalized interventions may not be easily fulfilled. Changing behavior on the basis of genetic risk information to mitigate risks is difficult to achieve. The United States lags behind other high-income nations in population health status, and there are growing gaps between haves and have-nots in health. Solving these problems lies in addressing social, economic and structural drivers of population health, not in focusing more on individual health. Additionally, the precision medicine agenda could shift resources from other areas, and its appeal may lead to hype and premature expectations that may cause long-term disillusionment and erosion of public confidence in health sciences.
+Precision medicine might improve population health because we need both individual and public health approaches to improve health. Population health planning requires directing efficient use of resources toward those most at risk. Past successes of genomics and precision medicine indicate that they can yield population health benefit. For example, newborn screening is the largest “precision medicine” public health program in the world. Even with no new insights, near-term population health impact of precision medicine could accrue by implementing CDC’s evidence-based “tier 1” genomic applications that have evidence-based recommendations for their use and can benefits millions of people. Finally, new precision technologies and data science, over time, will improve our ability to track and prevent infectious disease outbreaks, measure environmental exposures, enhance disease tracking in populations and help develop policies and targeted interventions that can improve health and address health disparities.
+
+A major challenge ahead is figuring out how to best use large-scale data from multiple levels ranging from genomic to environmental information sources. Can these data help us better understand determinants of population health and interventions that will improve health outcomes in subpopulations? It is highly likely that interventions targeted to whole populations (e.g. policies, housing and education) and those tailored to higher risk groups will both be required to prevent disease, improve health and reduce health disparities.
+
+## Applications to public health research and practice
+
+#### Exposomes and phenomes
+
+The exposome has been defined as the totality of exposure individuals experience over their lives and how those exposures affect health. Three domains of the exposome have been identified: internal, specific external and general external. Internal factors are those that are unique to the individual; and specific external factors include occupational exposures and lifestyle factors. The general external domain includes factors such as education level and financial status. Eliciting the exposome is daunting and at present not feasible and may never be fully realized. A variety of tools has been identified to measure the exposome. Biomarker measurements will be one of the major tools in exposomic studies. However, exposure data can also be obtained from other sources such as sensors, geographic information systems and conventional tools such as survey instruments. Proof of concept studies are being conducted that show the promise of the exposomic investigation and the integration of different kinds of data. The inherent value of exposomic data in epidemiologic studies is that they can provide greater understanding of the relationships among a broad range of chemical and other risk factors and diseases and ultimately lead to more effective and efficient prevention and control.
+
+Published in final edited form as:
+Am J Epidemiol. 2016 Aug 15; 184(4): 302–314.
+doi:  10.1093/aje/kwv325
+
+![](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5025320/bin/nihms813843f1.jpg)
+
+
+
+
+![](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5025320/bin/nihms813843f4.jpg)
+
+
+
+### CDC paper
+
+http://journals.sagepub.com/doi/pdf/10.1177/0033354917709542
+
+* Inefficiency, improvements, interoperability
+* Enhanced data collection
+* Enhanced data visualisation and analysis
+* Enhanced dissemination
+* Surveillance strategy
+* Challenges/ opportunities
+    + Shared IT 
+        + Standards e.g. Hl7, FHIR
+        + Cloud
+    + Workforce development
+        + Social determinants
+        + Informatics expertise
+    + Use of EHRs
+    
+#### Examples from CDC
+
+* http://data.cdc.gov - 600 + data sets via RESTful API. 
+* WISQARs - injury surveillance
+* Sortable Stats - risks and health indicators https://sortablestats.cdc.gov
+* Behavioral Risk Factor Sureillance System (BRFSS) https://www.cdc.gov/brfss/index.html
+* Prevention status reports - https://www.cdc.gov/psr/index.html
+* MMWR, Vital Signs and Public Health Grand Rounds
+
+## System dynamic modeling/ complex systems/ systems thinking
+
+https://www.ncbi.nlm.nih.gov/pubmed/26243490
+
+https://www.ncbi.nlm.nih.gov/pubmed/28243673
+
+> Simulation models are ‘what-if’ tools for testing the impacts of alternative policy scenarios before implementing solutions in the real world
+
+http://www.phrp.com.au/issues/february-2017-volume-27-issue-1-2/dynamic-simulation-modelling-of-policy-responses-to-reduce-alcohol-related-harms-rationale-and-procedure-for-a-participatory-approach/
+
+![](http://www.phrp.com.au/wp-content/uploads/2017/01/PHRPFEB17-Modelling-Figure-01.png)
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4351685/pdf/13012_2015_Article_221.pdf
+
+Table 1 The benefits of using simulation modelling for the design and analysis of public health policy [71,72]
+Benefits specific to knowledge translation General benefits
+● Provides a framework for operationalising vast amounts
+of often inaccessible scientific information
+● Assists with more systematic decision-making where there are evidence gaps
+● Actively engages multi-disciplinary stakeholders in
+model design
+● Elucidates leverage points in the system, where small inputs result in large impacts
+● Facilitates the development of a common ‘mental map’
+for progress and consensus on optimal policy decisions
+● Guides prioritisation and planning for resource efficiency and
+simulates scenarios that can add strength to business case development
+● Provides a formal channel for ongoing engagement and
+communication/information translation between researchers
+and policy makers as the model is updated to incorporate
+additional or changing evidence over time
+● Provides a framework for future research and evaluation of policy implementation
+● The model is available for routine use to simulate and analyse
+policy options/changes in a policy friendly timeframe
+● Can capture complex influences on a particular public health problem
+including political factors (national mood; actions and reactions of powerful
+vested interests, e.g. lobbyists, advocacy groups to simulated policy decisions)
+● Assists with countering the tradition of relying on
+intuition for policy decisions
+● Can facilitate the identification of policy responses that have improved
+contextual orientation and increased effectiveness
+● Can facilitate cross-sectoral communication and
+synthesis of knowledge
+
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4703442/table/cts12313-tbl-0001/?report=objectonly
+
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4895878/
+
+Operational research (OR) is the discipline of using models, either quantitative or qualitative, to aid decision-making in complex problems [1]. The practice of applied healthcare OR distinguishes itself from other model-based disciplines such as health economics as it is action research based where operational researchers participate collaboratively with those that work in or use the system to define, develop, and find ways to sustain solutions to live implementation problems [2]. The methods of OR have been used in healthcare since the 1950s [3] to analyse implementation problems in diverse areas such as emergency departments [4–6] and management policies for ambulance fleet [7]; acute stroke care [8–11], outpatient clinic waiting times [12], and locations [13]; cardiac surgery capacity planning [14]; the interface between acute and community care [15]; hospital performance [16]; scheduling and routing of nurse visits [17]; scheduling of patient appointments [18]; and many other complex implementation problems of an operational or logistical nature.
+
+# Simon Hay  - precision maps
+
+Trying to combine mutliple datasets at small areas to give updatable near real time data - "precision maps" - using 5x5 km grids for communicable disease
+
+## Big data
+
+
+5 Vs framework applied to data lake datasets
+
+"V"        | HES   | Mortality | Primary care | Surveys
+------------|----------|------------|--------|-------
+Volume (scale) |  ++  | + | ++ | +
+Variety (diversity) | o  | o | o | +
+Velocity (frequency) | ++ | +++ | ++ | + 
+Veracity (accuracy/ bias) | +  | ++ | + | ++
+Value (utility of data) | ++ | ++ | ++ | +
+
+Volume: ++++ > Terabytes; +++ Terabytes; ++ Gigabytes; + Megabytes; o Smaller
+
+Variety; ++ Multiple sources structured and unstrucutrured;  + Multiple sources structured/ unstrucutrured; o Single source
+
+Velocity: ++++ Continuous; +++ V frequent e.g. daily/ weekly; ++ Frequent e.g. monthly/ quarterly; + Infrequent e.g. annual; o One-off
+
+Veracity; ++ Highly accurate; + Some data quality concerns; o Poor/ unknown data quality
+
+Value: ++ High value; + Of value; o Poor/ unknown value
+
+
+## What can public health bring to AI
+
+
+## What next?
+
+
+## Conclusions
+
+
+## References

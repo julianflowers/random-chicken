@@ -1,0 +1,179 @@
+---
+title: "Profile_feedback"
+author: "Julian Flowers"
+date: "19 June 2017"
+output:
+  word_document: 
+    reference_docx: data/template.docx
+---
+
+# Rapid analysis of the profilefeedback mailbox
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Introduction
+
+The `profilefedback` mailbox is accessed via the Fingertips website and is a common means of user communication with the Fingertips team, profile creators, and wider PHE. The method outlined cojld equally be applied to other mailboxes collecting feedback.
+
+```{r, message=FALSE, warning=FALSE}
+library(readxl)
+library(tidyverse)
+library(tm)
+library(tidytext)
+
+
+
+```
+
+In order to download emails is a suitable form for further analysis, we have written a programme for extracting the emails into a text file. For the purposes of analysus we are restricting the fields to:
+
+* Date
+* Email sender
+* Email recipient
+* Subject
+* Body
+
+We need to read the text file in to -R- using the "not" separator.
+
+```{r read in emails}
+
+emails<- read_delim("HoFJF2.txt", delim = ";")
+
+head(emails)
+
+emails <- readLines("HoFJF2.txt")
+emails[1:20]
+emails_test <- data.frame(str_split(emails[3], ";", simplify = FALSE)) %>% mutate_if(is.factor, as.character)
+colnames(emails_test) <- "Text"
+
+emails_test <- emails_test %>%
+  filter(!str_detect(Text,"[Ee]mail| [Tt]witter| HYPERLINK | cid| www"))
+
+emails_test %>%
+  filter(!str_detect(Text, ":")) 
+
+```
+
+
+
+
+c("gold2", "navy", "orchid3")
+
+
+```{r}
+emails <- emails %>% mutate_if(is.factor, as.character) %>% select(-V6)
+colnames(emails) <- c("date", "to", "subject", "from", "body")
+
+emails1 <- emails %>% mutate( date = substr(date, 1, 10), date = (lubridate::dmy(date)))
+
+start <- range(emails1$date)[1]
+end <- range(emails1$date)[2]
+
+
+```
+
+This short report covers emails sent between `r start` and `r end`.
+
+
+## Email frequency
+
+```{r}
+options(digits = 2)
+
+
+tot_mails <- nrow(emails1)
+
+daily_mean <- emails1 %>% group_by(date) %>% tally() %>% summarise(daily_mean = mean(n))
+```
+
+
+Since `r start` the `profilefeedback` mailbox has received `r tot_mails` emails. On average there have been `r round(daily_mean,2)` emails a day since the beginning of 2015. Figure 1 shows daily emails - traffic inceased at the beginning of 2016. 
+
+```{r, fig.cap= "Figure 1: Daily emails"}
+
+emails1 %>%
+    group_by(date) %>%
+    count() %>%
+    ggplot(aes(date, n)) +
+    geom_point() +
+    geom_line() +
+    geom_smooth()
+
+
+
+```
+
+
+Tuesday and Thursday tend to be the busiest days for email traffic coinciding with release days.
+
+```{r, fig.cap= "Figure 2: Emails by month and day of the week"}
+library(viridis)
+
+emails1 <- emails1 %>%
+    mutate(wkday = lubridate::wday(date, label = TRUE),
+           month = lubridate::month(date, label = TRUE), 
+           year = lubridate::year(date))
+
+emails1 %>%
+    group_by(month, wkday, year) %>%
+    count() %>%
+    ggplot(aes(month, wkday,  fill= n)) +
+    geom_raster() +
+    facet_wrap(~year) +
+    scale_fill_viridis(name = "No of emails") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5))
+
+
+```
+
+## Topics
+
+
+
+```{r}
+
+emails %>%
+    group_by(subject) %>%
+    tally(sort = TRUE)
+
+```
+
+
+
+
+
+
+```{r}
+# df <- emails %>%
+#         mutate(parser = gsub("([A-Za-z]+).*", "\\1", `From: (Name)`), 
+#                contained = mapply(grepl, pattern=parser, x=Body)) %>%
+#         mutate(Body = gsub("\\r","",gsub("\\n","",Body))) %>%
+#         mutate(Body = mapply(gsub,pattern=paste0(parser,".*"),replacement="",x=Body))
+# 
+# sum(df$contained)/nrow(df)
+
+
+
+```
+
+
+```{r la emails, fig.height=10}
+
+emails1 %>%
+    group_by(from) %>%
+    tally(sort = TRUE) %>%
+    filter(stringr::str_detect(from, "gov.uk")) %>%
+    separate(from, c("name", "org"), sep = "@") %>%
+    separate(org, c("place","gov", "uk"), sep = "\\.", remove = FALSE) %>%
+    group_by(place) %>%
+    summarise(count = sum(n)) %>%
+    ggplot(aes(reorder(place, count), count)) +
+    geom_col(fill = "blue") +
+    coord_flip() +
+    theme(axis.text.y = element_text(size = rel(0.9))) +
+    labs(x = "")
+
+```
+

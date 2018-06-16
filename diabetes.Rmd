@@ -1,0 +1,341 @@
+---
+title: "Do patients with type 1 diabetes receive the same level of care as those with type 2 diabetes?"
+author: "Julian Flowers"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(fingertipsR)
+library(tidyverse)
+library(caret)
+source("~/Documents/R_projects/HAQ/ftips_utilities.R")
+```
+
+## My simple report
+
+This is my report about diabetes audit data. Firstly I am going to use the `fingertipsR` package to download some data - I am interested in the recently published diabetes data and seeing if people with type 1 diabetes get the same level of care as people with type 2 diabetes.
+
+I am only going to use 3 R packages for this analysis - `tidyverse` which includes `dplyr` containing tools for manipulating our data, and `ggplot2` for charting, `data.table` which is hugely powerful with larger datasets, and `fingertipsR` to extract the data from the Fingertips API.
+
+
+To get data from Fingertips you need to know some ID numbers. The first step is to run the `profiles()` function which we'll save to an R object called *prof*.
+
+```{r profiles}
+
+prof <- profiles()
+
+```
+
+We can look at the *prof* object with the `View` function (note capital V)
+
+```{r view profiles, warning=FALSE, eval=FALSE}
+
+View(prof)
+
+```
+
+I can see that the ProfileID is 139 and the DomainIDs are 1938133135 and 1938133136 for care processes and treatment targets.
+
+To download the data all we need to do is pass the DomainID to the `fingertips_data` function. We'll save this to an R object *diabetes_data*. One important issue is that by default the function downloads data for Upper Tier Local Authorities (ID = 102). If there is no data for UTLAs for a given indicator in Fingertips, no data will be returned. If data is avaialble for other geographies these need to be specficied. In this case looking at the profile in Fingertips we can see data is available for CCGs. CCGs have AreaTypeIDs of 152 and 153 - we need to include this in the download function. It'll take a few moments to download.
+
+```{r download data}
+
+## Download
+diabetes_data <- fingertips_data(DomainID = c(1938133135, 1938133136), AreaTypeID = c(152, 153))
+
+dm_latest <- fingertips_latest_data(ProfileID = 139, AreaTypeID = c(152, 153)) %>%
+  distinct()
+
+df <- dm_latest %>% select(index, AreaName, AreaCode, Value) %>% distinct
+
+df %>%
+  slice(c(19377, 33655))
+  ## create wide table
+  dfw <- df %>% spread(index, Value)
+  dfw <- dfw %>% janitor::clean_names()
+  
+  ## calculate na values - remove columns where %na < target value
+  dfw <- dfw %>% select_if(function(x) is.numeric(x) & mean(is.na(x)) < .1)
+  
+  dfmod <- caret::preProcess(dfw, method = "medianImpute")
+  dfw <- predict(dfmod, dfw)
+
+glimpse(dfw)
+
+
+```
+
+Now we can examine what we have. We'll explore the variables in the dataset, check if there is missing data and decide how to deal with it, reorganise the data so we can compare type 1 and type 2 diabetes, and compare levels of care. 
+
+We can also model the determinants of care outcomes, and see how they vary between type 1 and type 2 diabetes. 
+
+We can also use machine learning approaches to see how CCGs vary in their care provision.
+
+## Summary statistics
+
+```{r summary statistics }
+
+options(digits = 2)
+
+dfw %>% 
+  gather(indicator, value) %>%
+  group_by(indicator) %>%
+  summarise(n = n(), 
+            `missing %` = 100 * mean(is.na(value)), 
+            mean = mean(value, na.rm = TRUE),
+            sd = sd(value, na.rm = TRUE), 
+            quantiles = list(quantile(value, probs = c(0, 0.1, .25, .5, .75, .9, 1), names = TRUE,  na.rm = TRUE))) %>%
+    unnest() %>%
+  ungroup() %>%
+  mutate(q = rep(c("min", "10th", "25th", "median", "75th", "90th", "max"), 77)) %>% 
+  #mutate(row = row_number()) %>%
+  #slice((19:21))
+  spread(q, quantiles) %>%
+  janitor::clean_names() %>%
+  flextable::flextable()
+
+pca <- prcomp(scale(dfw))
+
+data.frame(pca$rotation) %>% flextable()
+summary(pca)
+
+
+```
+
+## Variation
+
+An effective way of visualising variation in a number of variables is the *ridgeplot*. We'll add a column to identify data for type 1 and type 2 diabetes
+
+```{r fig.height=5, warning=FALSE}
+
+library(ggridges)
+
+diabetes_data <- diabetes_data %>%
+  mutate(diabetes_type = case_when(str_detect(IndicatorName, "type 1")~"type_1", 
+                                   str_detect(IndicatorName, "type 2")~"type_2", 
+                                   TRUE ~ "participation")) 
+
+diabetes_data %>%
+  filter(!str_detect(IndicatorName, "^Ratio")) %>%
+  mutate(index = paste(IndicatorName, Timeperiod)) %>%
+  ggplot(aes(Value, reorder(index, rev(Timeperiod)), fill = diabetes_type)) +
+  geom_density_ridges(rel_min_height = 0.03, scale = 4, alpha = 0.6) +
+  theme_ridges() +
+  theme(axis.text.y = element_text(size = 7)) +
+  facet_wrap(~diabetes_type)
+
+
+
+
+```
+
+
+
+# Comparing mean
+
+```{r}
+
+glimpse(diabetes_data)
+
+dm <- diabetes_data %>%
+  #select(IndicatorName, Timeperiod, AreaName,  Value, diabetes_type) %>%
+  mutate(index = paste(IndicatorName, Timeperiod), 
+         Value = round(Value, 1), 
+         index = str_replace_all(index, "People with type [0-9] diabetes who.?|whose |received|achieved", ""), 
+         index = str_replace(index, "\\n", "")) %>%
+  filter(!str_detect(IndicatorName, "participation|^Ratio")) %>%
+  select(-c(IndicatorName, Timeperiod)) %>%
+  distinct() 
+
+
+dm <- select(dm, AreaName, index, Value, diabetes_type) %>% 
+      mutate(index = str_replace_all(index, "\\n", "")) %>% distinct()
+str(dm)
+
+unique(dm$AreaName)
+  
+dm %>% 
+    slice(c(3277, 12149))
+
+dm %>% spread(diabetes_type, Value) %>%
+  select(dm, index, AreaName) %>%
+ # mutate(type_1 = ifelse(is.na(type_1), type_2, type_1)) %>%
+  View()
+  
+  diabetes_data %>%
+  #select(IndicatorName, Timeperiod, AreaName,  Value, diabetes_type) %>%
+      mutate(index = paste(IndicatorName, Timeperiod), 
+         Value = round(Value, 2), 
+         index = str_replace_all(index, "People with type [0-9] diabetes who.?|whose |received|achieved", ""), 
+         index = str_replace(index, "\\n", "")) %>%
+  filter(!str_detect(IndicatorName, "participation|^Ratio")) %>%
+  filter(AreaName == "NHS Norwich CCG") %>%
+  select(index, Sex, Age, Timeperiod, Category,  Value,  diabetes_type) %>%
+  View()
+  
+```
+
+
+
+
+
+
+The proportion of people with type 2 diabetes who receive high quality care is at least 10% points higher than people with type 1 diabetes.
+
+
+There is also more variation between CCGs for people with type 1 diabetes.
+
+```{r predictors of care processes}
+library(rpart)
+library(partykit)
+library(rpart.plot)
+library(lasso2)
+
+part <- comp_dm %>%
+  janitor::clean_names() %>%
+  filter(ind == "type_1" ) 
+
+
+partmod <- rpart(who_received_all_8_care_processes ~., data = part[, -c(1:2)])
+
+rpart.plot(partmod, type = 4, extra = 100, cex= .3)
+
+part1 <- comp_dm %>%
+  janitor::clean_names() %>%
+  filter(ind == "type_2" ) 
+
+
+partmod1 <- rpart(who_received_all_8_care_processes ~., data = part1[, -c(1:2)])
+
+rpart.plot(partmod1, type = 4, extra = 100, cex= .3)
+
+library(glmnet)
+
+y <- part1 %>% select(who_received_all_8_care_processes) %>% as.matrix()
+x <- part1 %>% select(-c(who_received_all_8_care_processes, areaname_x, ind)) %>% as.matrix()
+glmnetmodel <- glmnet(x, y, family = "gaussian")
+
+broom::tidy(glmnetmodel)
+
+plot.glmnet(glmnetmodel)
+
+
+```
+
+
+We may want to reduce the number of variables, and use only the latest data. The download contains the field `TimeperiodSortable`. This in included to identify the latest data available in Fingertips - the latest data will always be the maximum value of this field. 
+
+
+
+We will use the `filter` function to restrict the dataset to the latest data:
+
+```{r}
+
+filtered_data <- filter(diabetes_data, TimeperiodSortable == max(TimeperiodSortable), 
+                        is.na(Valuenote)|Valuenote == "Aggregated from all known lower geography values")
+
+```
+
+we'll recode the data to split out type 1 from type 2 diabetes;
+
+```{r}
+
+filtered_data <- filtered_data %>%
+  mutate(dm_type = ifelse(stringr::str_detect(IndicatorName, "type 2"), "type_2", 
+                          ifelse(stringr::str_detect(IndicatorName, "type 1"), "type_1", 
+                          "other"))) 
+
+
+unique(filtered_data$AreaName)
+
+filtered_data %>%
+  group_by(dm_type) %>% 
+  count()
+  
+227 * 2 *19
+```
+
+and we'll restrict the number of fields using the `select` function - this allows to restrict our dataset to fewer columns
+
+```{r}
+
+filtered_data <- select(filtered_data, dm_type, IndicatorName, AreaCode, AreaName, Sex, Age, Value, Count, Denominator)
+
+
+## Show the top 6 rows
+head(filtered_data)
+
+```
+
+## Exploratory analysis
+
+```{r}
+
+options(digits = 3)
+
+filtered_data %>%
+  group_by(AreaName, IndicatorName) %>%
+  count() %>%
+  filter(n >1)
+
+summary(filtered_data)
+
+summary_stats <- filtered_data %>%
+  group_by(dm_type, IndicatorName) %>%
+  distinct() %>%
+  summarise(n = n(),
+    mean = mean(Value, na.rm = TRUE), 
+    median = median(Value, na.rm = TRUE), 
+    min = min(Value, na.rm = TRUE), 
+    max = max(Value, na.rm = TRUE), 
+    q25 = quantile(Value, probs = 0.25, na.rm = TRUE), 
+    q75 = quantile(Value, probs = 0.75, na.rm = TRUE)
+    )
+    
+  summary_stats  %>%
+    pander::pander()
+  
+  
+    
+  
+```
+
+### Comparing mean levels
+
+```{r}
+filtered_data %>%
+  filter(AreaName == "NHS Norwich CCG", 
+         str_detect(IndicatorName, "BMI"))
+
+filtered_data %>% 
+  filter(IndicatorName != "Level of participation in the National Diabetes Audit") %>%
+  mutate(ind = stringr::str_replace_all(IndicatorName, "People with type 1 diabetes |People with type 2 diabetes", "")) %>% 
+  arrange(AreaName, ind) %>%
+  select(Sex, Age, ind, AreaName, Value, dm_type) %>%
+  distinct() %>% 
+  #dplyr::coalesce() %>%
+  #janitor::get_dupes(ind, Sex, Age, AreaName, dm_type)
+ ## slice(c(2510, 2519)) %>%
+spread(dm_type, Value) %>%
+  View()
+  
+
+```
+
+
+
+
+
+
+
+  
+    
+  
+
+
+
+
