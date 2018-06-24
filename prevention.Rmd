@@ -1,0 +1,111 @@
+---
+title: "prevention"
+author: "Julian Flowers"
+date: "24/06/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+githubinstall::githubinstall("taucharts")
+
+library(pacman)
+p_load(tidyverse, taucharts, myScrapers, readtext, rvest, quanteda)
+
+```
+
+## PHE catalogue
+
+```{r}
+
+phe_cat <- get_phe_catalogue(n = 97)
+
+
+phe_cat
+
+```
+
+
+## Dementia prevention pdfs
+
+```{r}
+
+url <- "https://www.gov.uk/government/publications/dementia-in-older-age-barriers-to-primary-prevention-and-factors"
+
+pdfs <- read_html(url) %>%
+  html_nodes("a") %>%
+  html_attr("href") %>%
+  .[grepl(".pdf", .)] %>%
+  .[c(1, 4, 7, 10)]
+
+pdf_urls <- paste0("https://www.gov.uk", pdfs)
+
+pdf_urls
+
+pdf_text <- readtext(pdf_urls) %>% mutate(text = str_replace_all(text, "\\n", ""))
+
+pdf_text[3,2]
+
+
+```
+
+## Rapid review
+
+```{r}
+
+pdf_text %>%
+  group_by(doc_id) %>%
+  create_bigrams(., text) %>%
+  count(bigram, sort = TRUE) %>%
+  filter(n >=5) %>%
+  create_network_plot()
+
+
+
+
+```
+
+
+```{r}
+
+dem_corpus <- corpus(pdf_text)
+
+kwic(dem_corpus, phrase("ci"), window = 20) %>% data.frame() %>% View()
+
+
+
+
+```
+
+
+
+## Prevention blogs
+
+```{r}
+
+prev_url <- "https://publichealthmatters.blog.gov.uk/category/priority1/"
+prev_url1 <- "https://publichealthmatters.blog.gov.uk/?s=prevention+programmes"
+
+n <- 38
+
+prev_urls <- paste0(prev_url1, "page/", 2:n, "/")
+prev_urls <- c(prev_url, prev_urls, prev_url1)
+
+links <- get_blog_links(prev_urls)
+
+blogs <- map(links, function(x) get_blog_text(x))
+blogs1 <- map(blogs, data.frame)
+blogs2 <- map_df(blogs1, bind_rows)
+
+colnames(blogs2) <- c("blog", "url")
+
+blogs2 %>% group_by(url) %>% 
+  mutate(blog = tm::removeNumbers(blog)) %>%
+  create_bigrams(blog) %>% count(bigram) %>%
+  filter(n>1)%>%
+  create_network_plot(layout = "fr", textsize = 2)
+
+blogs2[13,]
+
+```
+

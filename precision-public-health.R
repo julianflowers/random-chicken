@@ -20,21 +20,19 @@ DT::datatable(trip_1, escape = FALSE)
 
 pmed_1 <- pubmedAbstractR(search = term1, end = end,  n = 1000)
 
+
 pmed_1 %>%
   group_by(keyword, year) %>%
   count(sort = TRUE) %>%
   filter(n <50 & n > 5) %>%
   create_network_plot(layout = "fr")
 
-  %>%
-  filter %>%
-  View()
 
 pmed_1 %>%
   filter(str_detect(title, "[Pp]recision")) %>%
-  select(title, DOI, abstract) %>%
+  select(title, DOI, abstract, journal, year) %>%
   distinct() %>%
-  View()
+  DT::datatable()
 
 ###### exposome/ phenome
 
@@ -62,6 +60,8 @@ term5 <- "Artificial Intelligence[MeSH] AND Public Health{MeSH]"
 
 ai_pmed <- pubmedAbstractR(term5, end = end, n = 2017)
 
+ai_pmed <- mutate(ai_pmed, search = term5)
+
 ai_pmed %>%
   select(-keyword) %>%
   distinct() %>%
@@ -82,13 +82,40 @@ ai_pmed %>%
 
 aidoi <- unique(ai_pmed$DOI)
 
+aidoi
+
 ## ML public health
 
 term6 <- "Machine Learning[MeSH] AND Public Health[MeSH]"
 
 ml_pmed <- pubmedAbstractR(term6, end = end, n = 4556)
 
-ai_pmed %>%
+ml_pmed <- mutate(ml_pmed, search = term6)
+
+head(ml_pmed)
+
+mldoi <- unique(ml_pmed$DOI)
+
+ml_pmed %>%
+  filter(keyword %in% c("Machine Learning", "Artificial Intelligence")) %>%
+  
+
+#### overlap
+ai_ml_pmed <- filter(ml_pmed, DOI %in% intersect(mldoi, aidoi)) 
+
+ai_ml_pmed %>%
+  select(-keyword) %>%
+  distinct() %>%
+  create_bigrams(abstract) %>%
+  group_by(year, bigram) %>%
+  count() %>%
+  filter(n>4, year > 2014, year < 2018) %>%
+  create_network_plot(textsize = 2) +
+  labs(title = "Network plot of abstracts for AI & machine learning in PH",
+       subtitle = paste("Abstracts 2015-17: n = ", length(unique(ai_ml_pmed$DOI))))
+
+
+ml_pmed %>%
   select(-keyword) %>%
   distinct() %>%
   group_by(year) %>%
@@ -97,12 +124,14 @@ ai_pmed %>%
   geom_col() +
   labs(title = paste("Annual count of abstracts: ", term6)) 
 
-ai_pmed %>%
+ml_pmed %>%
   select(-keyword) %>%
   distinct() %>%
   create_bigrams(abstract) %>%
-  group_by(year, bigram)
-  
+  group_by(year, bigram) %>%
+  count() %>%
+  filter(n>19) %>%
+  create_network_plot()
 
 ## chat bot   
   

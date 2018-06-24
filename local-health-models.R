@@ -110,17 +110,34 @@ mean(is.na(ward_ds_scale))
 print(ward_ds_scale %>%
         select(-starts_with("Area")) %>%
         do(broom::glance(lm(`Obese adults` ~ ., data = .))) )
-      
-      
-      %>%
-        filter(p.value < 0.01) %>%
-        select(term, estimate, p.value) %>%
-        arrange(estimate))
 
+## Final data set
+
+ward_ds_w_clean <- ward_ds_w_clean %>% janitor::clean_names()
+
+x <- ward_ds_w_clean %>% select(-c("area_code", "area_name", "obese_adults"))
+
+cor(x) %>%
+  corrplot::corrplot(tl.cex = .5, tl.col = "black", order = "FPC")
+
+# take a leap
+
+leaps1 <-  leaps::regsubsets(x = x, y = ward_ds_w_clean$obese_adults, nbest = 10, nvmax = 6 , really.big = T)
+
+summary.out <- summary(leaps1)
+as.data.frame(summary.out$outmat) %>% View()
+
+plot(leaps1, scale = "CP")
+
+which.max(summary.out$adjr2)
+summary.out$which[91, ] == TRUE
+
+which.min(summary.out$cp)
+which.min(summary.out$bic)
+      
 library (caret)
 library(caretEnsemble)
 
-ward_ds_w_clean <- ward_ds_w_clean %>% janitor::clean_names()
 
 # glmnet
 
@@ -134,6 +151,59 @@ summary(warddsTrain)
 
 ## Set cross validation
 control <- trainControl(method="repeatedcv", number=10, repeats=3, savePredictions = "final", predictionBounds = c(TRUE, TRUE))
+
+
+### leaps
+
+leaps <- train(obese_adults ~., data=warddsTrain[,-c(1:2)], trControl=control, method = "leapForward")
+
+varImp(leaps)
+
+pred_leaps <- predict(leaps, newdata = warddsTest, interval = "prediction")
+
+head(pred_leaps)
+
+preds_leaps <- data.frame(pred_leaps, obs = warddsTest$obese_adults) %>% janitor::clean_names()
+
+pairs(preds_leaps)
+
+RMSE(preds_leaps$pred_leaps, preds_leaps$obs)
+
+broom::glance(lm(pred_leaps ~ obs, data = preds_leaps)) %>% select(r.squared)
+
+### cubist
+
+cubist <- train(obese_adults ~., data=warddsTrain[,-c(1:2)], trControl=control, method = "cubist")
+
+varImp(cubist)
+
+pred_cubist <- predict(cubist, newdata = warddsTest, interval = "prediction")
+
+
+preds_cubist <- data.frame(pred_cubist, obs = warddsTest$obese_adults) %>% janitor::clean_names()
+
+pairs(preds_cubist)
+
+RMSE(preds_cubist$pred_cubist, preds_cubist$obs)
+
+broom::glance(lm(pred_cubist ~ obs, data = preds_cubist)) %>% select(r.squared)
+
+sum.cubist <- summary(cubist)
+
+sum.cubist$output
+
+cubist$results
+
+cubist$bestTune
+
+cubist$finalModel
+
+cubist$finalModel$splits
+
+
+
+
+
 
 
 ### SVM
@@ -248,29 +318,14 @@ summary(results)
 ## results
 dotplot(results)
 
-pred <- as.data.frame(predict(models, newdata = warddsTest)))
+pred <- as.data.frame(predict(models, newdata = warddsTest))
+
+pairs(pred)
 
 preds <- data.frame(pred, obs = warddsTest$obese_adults) %>% janitor::clean_names()
 
-sqrt(mean((preds$glm - preds$obs)^2))
+pairs(preds, panel = panel.smooth)
 
-hist(preds[, 6])
-
-
-
-
-
-
-
-
-
-
-
-
-
-caretList()
-
-mean(ward_ds_w_clean$`Obese adults`)
 mod1 <- train(`Obese adults` ~., method = "brnn", data =warddsTrain[, -c(1:2)], metric = "RMSE")
 
 mod1$results %>%
