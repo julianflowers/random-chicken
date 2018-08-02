@@ -1,0 +1,133 @@
+---
+title: "Standard report for Health Intelligence Google Analytics"
+author: "Julian Flowers"
+date: "`r Sys.Date()`"
+output: 
+    powerpoint_presentation:
+      toc: yes
+      fig_height: 6
+      fig_width: 8
+      fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning  = FALSE)
+```
+
+```{r libraries}
+
+library(pacman)
+p_load(higaR, tidyverse)
+
+
+
+```
+
+# Introduction
+
+We introduce an alpha package `higaR` which is designed to help access and present data from Google Analytics data 
+
+## Getting IDs
+
+```{r ids}
+
+ga_list <- get_ga_list() %>% as.character(.)
+lookup <- list_profiles()
+
+ids <- lookup[lookup$id %in% ga_list, ]$id
+names <- lookup[lookup$id %in% ga_list, ]$name
+url <- lookup[lookup$id %in% ga_list, ]$websiteUrl
+lookups <- data.frame(ids = as.numeric(ids), names = as.character(names), url = url)
+
+```
+
+## Getting data
+
+```{r}
+
+ftips <- get_ki_analytics(ids = lookups$ids[1:2], first = "2016-01-01")
+khub <- get_ki_analytics(ids = lookups$ids[c(3:12, 14)], first = "2016-01-01")
+localhealth <- get_ki_analytics(ids = lookups$ids[15], first = "2016-01-01")
+shape <- get_ki_analytics(ids = lookups$ids[17:21], first = "2016-01-01")
+
+
+```
+
+## Summary data
+
+```{r ftips}
+plot_quarterly_stats(ftips, enddate = "2018-07-01", title = "Fingertips quarterly stats", caption = "Monthly users have increased \nBounce rate and time on page is stable") 
+
+
+```
+
+```{r khub}
+plot_quarterly_stats(khub, enddate = "2018-07-01", title = "KHub quarterly stats", caption = "Quarterly users have decreased \nBounce rate and time on page is stable") 
+
+
+```
+
+```{r localhealth}
+plot_quarterly_stats(localhealth, enddate = "2018-07-01", title = "Local heatlh quarterly stats", caption = "Quarterly users have decreased \nBounce rate and time on page is stable") 
+
+
+```
+
+```{r}
+plot_quarterly_stats(shape, enddate = "2018-07-01", title = "SHAPE quarterly stats", caption = "Spike corresponds to launch of dementia atlas \nQuarterly users have decreased \nBounce rate is high and time on page is reducing") 
+
+```
+
+```{r}
+lp <- get_ki_landingPages(ids = lookups$ids[1:2], first = "2016-01-01")
+```
+
+
+## Landing pages
+
+
+```{r}
+
+profiles_heatmap(ds = lp, title = "Top profiles") +
+  theme(axis.text = element_text(size = 6))
+
+
+```
+
+## Search terms
+
+```{r}
+
+search_heatmap(lp, title = "Top search terms") +
+  theme(axis.text = element_text(size = 6))
+
+```
+
+## Events
+
+```{r}
+
+events <- get_ki_events(ids = lookups$ids[1:2], first = "2016-01-01")
+```
+
+```{r}
+
+events %>%
+  group_by(qtr = zoo::as.yearqtr(date), eventCategory) %>%
+  summarise(totEvents = sum(totalEvents)) %>%
+  filter(totEvents < 10000, totEvents > 1000, qtr != "2018-3") %>%
+  ggplot(aes(qtr, eventCategory, fill = totEvents)) +
+  geom_tile() +
+  scale_fill_distiller(palette = "Spectral") +
+  zoo::scale_x_yearqtr()
+
+events %>%
+  group_by(qtr = zoo::as.yearqtr(date), eventCategory) %>%
+  summarise(totEvents = sum(totalEvents)) %>%
+  filter(eventCategory %in% c("Search", "Download"), qtr != "2018-3") %>%
+  ggplot(aes(qtr, totEvents, group = eventCategory, color = eventCategory)) +
+  geom_line() +
+  geom_point() +
+  zoo::scale_x_yearqtr()
+```
+

@@ -1,0 +1,10 @@
+Package: higaR
+Type: Package
+Title: A Package For Getting Google Analytics Data For Health Intelligence Products
+Version: 0.1.0
+Author: Julian Flowers
+Maintainer: Julian Flowers <julian.flowers@phe.gov.uk>
+Description: Extract google analyics data for health intelligence web pages and some utilities for plotting statistics
+License: OpenGL
+Encoding: UTF-8
+LazyData: true
